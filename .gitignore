@@ -11,6 +11,9 @@ config.yaml
 credentials/
 *.json
 !config.schema.json
+# Hook-Registrierung für Claude Code; enthält nur einen Dateipfad,
+# keine Zugangsdaten.
+!.claude/settings.json
 .env
 
 # Rohdaten mit möglichen personenbezogenen Daten (DSGVO)
