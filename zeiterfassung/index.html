@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stempeluhr Feind</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #EEF1F4; --surface: #FFFFFF; --soft: #E4EAF0; --line: #CFD7DF;
+  --ink: #1A2028; --muted: #5B6672; --accent: #1E5A82; --accent-ink: #FFFFFF; --accent-soft: #DCE9F3;
+  --good: #2E7D4F; --good-soft: #DDF0E4; --warn: #A86400; --warn-soft: #FBEBCC; --crit: #B3261E; --crit-soft: #F8DEDC;
+  --shadow: 0 1px 2px rgba(20,30,40,.06), 0 6px 20px rgba(20,30,40,.06);
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161B; --surface: #1B2128; --soft: #232B33; --line: #2F3942;
+    --ink: #E6EAEE; --muted: #98A3AE; --accent: #6DAEDB; --accent-ink: #0E1A24; --accent-soft: #1F3444;
+    --good: #5CC08A; --good-soft: #1C3328; --warn: #E3A94A; --warn-soft: #3A2C12; --crit: #F08078; --crit-soft: #3F1E1C;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161B; --surface: #1B2128; --soft: #232B33; --line: #2F3942;
+  --ink: #E6EAEE; --muted: #98A3AE; --accent: #6DAEDB; --accent-ink: #0E1A24; --accent-soft: #1F3444;
+  --good: #5CC08A; --good-soft: #1C3328; --warn: #E3A94A; --warn-soft: #3A2C12; --crit: #F08078; --crit-soft: #3F1E1C;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--bg); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 14px; line-height: 1.45;
+  padding-block: 0 48px; padding-inline: clamp(16px, 3vw, 32px);
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+
+/* Kopf */
+.top {
+  display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px;
+  padding-block: 22px 4px; border-bottom: 1px solid var(--line);
+}
+.brand { display: grid; gap: 2px; }
+.brand h1 { font-size: 28px; font-weight: 700; letter-spacing: .01em; line-height: 1.1; }
+.brand .sub { color: var(--muted); font-size: 13px; }
+.clock { display: grid; justify-items: end; gap: 2px; }
+.clock .time { font-family: var(--font-mono); font-size: 34px; font-weight: 500; line-height: 1; letter-spacing: -.01em; }
+.clock .date { color: var(--muted); font-size: 13px; }
+
+/* Stempelleiste */
+.punch {
+  display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow);
+}
+.status { display: grid; gap: 4px; }
+.status .label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.status .state { font-family: var(--font-display); font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.dot.working { background: var(--good); box-shadow: 0 0 0 4px var(--good-soft); }
+.dot.break { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-soft); }
+.status .since { color: var(--muted); font-size: 13px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 8px; padding: 9px 14px; font-weight: 600; font-family: var(--font-display); font-size: 15px; letter-spacing: .01em;
+  display: inline-flex; align-items: center; gap: 8px; transition: background .12s, border-color .12s;
+}
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: .38; cursor: not-allowed; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn.danger { color: var(--crit); }
+.btn.sm { padding: 5px 10px; font-size: 13px; font-family: var(--font-body); font-weight: 500; }
+.btn.punch-btn { min-width: 108px; justify-content: center; padding-block: 12px; }
+
+/* Kennzahlen */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; }
+.kpi .k { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.kpi .v { font-family: var(--font-mono); font-size: 24px; font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .v small { font-size: 14px; color: var(--muted); font-weight: 400; }
+.kpi .m { font-size: 12px; color: var(--muted); }
+.kpi.warn .v { color: var(--warn); }
+.kpi.crit .v { color: var(--crit); }
+.kpi.good .v { color: var(--good); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab {
+  background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; margin-bottom: -1px;
+  color: var(--muted); font-family: var(--font-display); font-size: 16px; font-weight: 600; white-space: nowrap;
+}
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.panel { display: grid; gap: 14px; }
+.panel[hidden] { display: none; }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.panel-head h2 { font-size: 20px; font-weight: 600; }
+.panel-head .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Tabellen */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 720px; }
+th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; background: var(--soft); position: sticky; top: 0; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--soft) 55%, transparent); }
+td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.muted { color: var(--muted); }
+tr.week-sep td { background: var(--soft); font-family: var(--font-display); font-weight: 600; font-size: 13px; padding-block: 6px; }
+tr.week-sep td span { color: var(--muted); font-family: var(--font-mono); font-weight: 400; margin-left: 10px; }
+.pos { color: var(--good); } .neg { color: var(--crit); }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.chip.work { background: var(--accent-soft); color: var(--accent); }
+.chip.break { background: var(--soft); color: var(--muted); }
+.chip.open { background: var(--warn-soft); color: var(--warn); }
+.chip.crit { background: var(--crit-soft); color: var(--crit); }
+.chip.ok { background: var(--good-soft); color: var(--good); }
+.hints { display: flex; flex-wrap: wrap; gap: 4px; }
+.hint { font-size: 12px; color: var(--warn); }
+.hint.crit { color: var(--crit); }
+
+/* Wochen */
+.weeks { display: grid; gap: 12px; }
+.week { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; }
+.week-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+.week-head h3 { font-size: 18px; font-weight: 600; }
+.week-head .range { color: var(--muted); font-family: var(--font-mono); font-size: 13px; }
+.week-sum { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.week-sum b { color: var(--ink); font-family: var(--font-mono); font-weight: 500; }
+.bars { display: grid; gap: 6px; }
+.bar-row { display: grid; grid-template-columns: 96px 1fr 64px; gap: 10px; align-items: center; font-size: 13px; }
+.bar-row .d { font-family: var(--font-mono); color: var(--muted); }
+.bar { height: 14px; background: var(--soft); border-radius: 3px; position: relative; overflow: hidden; }
+.bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; }
+.bar .fill.over { background: var(--good); }
+.bar .target { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); opacity: .55; }
+.bar-row .n { text-align: right; font-family: var(--font-mono); }
+
+/* Formulare */
+.form { display: grid; gap: 10px; }
+.form .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+input, select, textarea {
+  font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; width: 100%;
+}
+input[type="time"], input[type="date"] { font-family: var(--font-mono); }
+textarea { font-family: var(--font-mono); font-size: 12px; min-height: 120px; resize: vertical; }
+.check-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.check-row label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+.check-row input { width: auto; }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 20px; width: min(560px, calc(100vw - 32px)); box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(10,14,18,.45); }
+dialog h3 { font-size: 20px; margin-bottom: 12px; }
+.dialog-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.dialog-actions .right { display: flex; gap: 8px; }
+.error { color: var(--crit); font-size: 13px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
+.card h3 { font-size: 17px; font-weight: 600; }
+.card p { margin: 0; color: var(--muted); font-size: 13px; max-width: 65ch; }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+  padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.toast.show { opacity: 1; }
+.foot { color: var(--muted); font-size: 12px; max-width: 70ch; }
+.empty { padding: 28px; text-align: center; color: var(--muted); }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; }
+.chip.src { background: var(--accent-soft); color: var(--accent); }
+.files td { font-size: 13px; }
+.stack { display: grid; gap: 12px; }
+
+@media (max-width: 640px) {
+  .punch { grid-template-columns: 1fr; }
+  .clock { justify-items: start; }
+  .bar-row { grid-template-columns: 72px 1fr 56px; }
+  table { min-width: 640px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Stempeluhr</h1>
+      <div class="sub">Zeiterfassung · David Halko · Fräsdienst-Service E. Feind GmbH</div>
+    </div>
+    <div class="clock">
+      <div class="time" id="clock-time">--:--</div>
+      <div class="date" id="clock-date"></div>
+    </div>
+  </header>
+
+  <section class="punch" aria-label="Stempeluhr">
+    <div class="status">
+      <div class="label">Status</div>
+      <div class="state"><span class="dot" id="state-dot"></span><span id="state-text">Ausgestempelt</span></div>
+      <div class="since" id="state-since"></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary punch-btn" id="btn-in" data-action="in">Kommen</button>
+      <button class="btn punch-btn" id="btn-break" data-action="break">Pause</button>
+      <button class="btn punch-btn" id="btn-resume" data-action="resume">Weiter</button>
+      <button class="btn punch-btn" id="btn-out" data-action="out">Gehen</button>
+    </div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Kennzahlen"></section>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-days" aria-selected="true" data-tab="days">Tagesübersicht</button>
+    <button class="tab" role="tab" id="tab-bookings" aria-selected="false" data-tab="bookings">Buchungen</button>
+    <button class="tab" role="tab" id="tab-weeks" aria-selected="false" data-tab="weeks">Wochen</button>
+    <button class="tab" role="tab" id="tab-data" aria-selected="false" data-tab="data">Daten &amp; Einstellungen</button>
+  </nav>
+
+  <section class="panel" id="panel-days" role="tabpanel">
+    <div class="panel-head">
+      <h2>Tagesübersicht</h2>
+      <div class="tools">
+        <button class="btn sm" id="btn-export-days">Tage als CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table id="days-table"></table></div>
+  </section>
+
+  <section class="panel" id="panel-bookings" role="tabpanel" hidden>
+    <div class="panel-head">
+      <h2>Buchungen</h2>
+      <div class="tools">
+        <select id="filter-month" aria-label="Monat filtern"></select>
+        <button class="btn sm" id="btn-export-bookings">Buchungen als CSV</button>
+        <button class="btn sm primary" id="btn-add">+ Buchung</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table id="bookings-table"></table></div>
+  </section>
+
+  <section class="panel" id="panel-weeks" role="tabpanel" hidden>
+    <div class="panel-head"><h2>Wochen</h2></div>
+    <div class="weeks" id="weeks"></div>
+  </section>
+
+  <section class="panel" id="panel-data" role="tabpanel" hidden>
+    <div class="grid-2">
+      <div class="card" id="card-optitime" hidden style="grid-column: 1 / -1">
+        <div class="panel-head"><h3>OptiTime</h3><div class="tools"><button class="btn sm primary" id="btn-optitime-sync">Neu einlesen</button><button class="btn sm" id="btn-diagnose">Diagnose</button><button class="btn sm" id="btn-quit">Stempeluhr beenden</button></div></div>
+        <div id="optitime-body"></div>
+        <div id="diagnose-box" hidden class="stack">
+          <p>Der Bericht zeigt, welche Dateien im OptiTime-Ordner liegen und wie sie erkannt wurden. Er enthält Auszüge Ihrer eigenen Zeitdaten. Zum Weitergeben kopieren; er liegt auch unter %APPDATA%\Stempeluhr\diagnose.txt.</p>
+          <textarea id="diagnose-area" readonly aria-label="Diagnosebericht" style="min-height:260px"></textarea>
+          <div><button class="btn sm" id="btn-diagnose-copy">In Zwischenablage</button></div>
+        </div>
+      </div>
+      <div class="card" id="card-storage" hidden style="grid-column: 1 / -1">
+        <div class="panel-head"><h3>Datenablage</h3><div class="tools"><button class="btn sm" id="btn-open-data">Ordner öffnen</button></div></div>
+        <div id="storage-body"></div>
+      </div>
+      <div class="card">
+        <h3>Arbeitszeit-Soll</h3>
+        <p>Das Tages-Soll ergibt sich aus Wochenstunden ÷ Arbeitstage. Es wird nur für Tage mit Buchungen angesetzt; Urlaub und Krankheit werden nicht erfasst.</p>
+        <form class="form" id="settings-form">
+          <div class="row">
+            <div class="field"><label for="set-hours">Wochenstunden</label><input type="number" id="set-hours" min="1" max="60" step="0.5"></div>
+            <div class="field"><label>Tages-Soll</label><div class="mono" id="set-daily" style="padding:8px 0"></div></div>
+          </div>
+          <div class="field"><label>Arbeitstage</label>
+            <div class="check-row" id="set-days"></div>
+          </div>
+          <div><button class="btn sm primary" type="submit">Speichern</button></div>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Export</h3>
+        <p>CSV mit Semikolon, direkt in Excel oder Google Sheets zu öffnen. Wenn der Browser den Download blockiert, den Text unten kopieren.</p>
+        <div class="tools" style="display:flex;flex-wrap:wrap;gap:8px">
+          <button class="btn sm" id="btn-export-bookings-2">Buchungen als CSV</button>
+          <button class="btn sm" id="btn-export-days-2">Tage als CSV</button>
+          <button class="btn sm" id="btn-export-json">Backup (JSON)</button>
+          <button class="btn sm" id="btn-copy">In Zwischenablage</button>
+        </div>
+        <textarea id="export-area" readonly aria-label="Exportierter Text" placeholder="Export erscheint hier …"></textarea>
+      </div>
+      <div class="card">
+        <h3>Import</h3>
+        <p>CSV im Format <span class="mono">Datum;von;bis;Auftrag;Tätigkeit</span> (Export dieser App oder das Blatt „Buchungen" der Google-Tabelle) oder ein JSON-Backup. Import ersetzt Buchungen mit gleichem Datum und gleicher Startzeit.</p>
+        <input type="file" id="import-file" accept=".csv,.json,text/csv,application/json" aria-label="Datei wählen">
+        <textarea id="import-area" aria-label="Importtext" placeholder="… oder Text hier einfügen"></textarea>
+        <div class="tools" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn sm primary" id="btn-import">Importieren</button>
+          <span class="error" id="import-error"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Daten</h3>
+        <p id="data-info"></p>
+        <div class="tools" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn sm" id="btn-seed">Daten aus Google-Tabelle laden</button>
+          <button class="btn sm danger" id="btn-clear">Alle Buchungen löschen</button>
+        </div>
+      </div>
+    </div>
+    <p class="foot"><span id="foot-storage">Die Daten liegen ausschließlich im Browser (localStorage) dieses Geräts.</span> Hinweise zu Pausen und Höchstarbeitszeit orientieren sich an § 3 und § 4 ArbZG und ersetzen keine Rechtsberatung – bei Fragen zur Arbeitszeitregelung bitte Rechtsabteilung prüfen.</p>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" class="form" id="booking-form">
+    <h3 id="dlg-title">Buchung</h3>
+    <div class="row">
+      <div class="field"><label for="f-date">Datum</label><input type="date" id="f-date" required></div>
+      <div class="field"><label for="f-kind">Zeitart</label>
+        <select id="f-kind"><option value="work">Arbeitszeit (000999 Kommen)</option><option value="break">Pause (000007 *Pause*)</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="f-start">Von</label><input type="time" id="f-start" required></div>
+      <div class="field"><label for="f-end">Bis (leer = offen)</label><input type="time" id="f-end"></div>
+    </div>
+    <div class="field"><label for="f-note">Bemerkung</label><input type="text" id="f-note" maxlength="200"></div>
+    <div class="error" id="f-error"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn sm danger" id="f-delete">Löschen</button>
+      <div class="right">
+        <button type="button" class="btn sm" id="f-cancel">Abbrechen</button>
+        <button type="submit" class="btn sm primary" id="f-save">Speichern</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="zeit.js"></script>
+<script src="seed-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

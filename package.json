@@ -1,0 +1,11 @@
+{
+  "name": "aiassistent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Werkzeuge für Marketing & Events – u. a. Stempeluhr (Zeiterfassung)",
+  "scripts": {
+    "test": "node --test zeiterfassung/test/*.test.js",
+    "start": "node -e \"const p=require('path').resolve('zeiterfassung/index.html');console.log('Im Browser öffnen: file://'+p)\""
+  },
+  "license": "UNLICENSED"
+}
